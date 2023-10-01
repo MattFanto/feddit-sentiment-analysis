@@ -9,16 +9,12 @@ def predict_sentiment(feedit_data):
         "sentiment_score": 1.0,
         "sentiment": "positive"
     }
-    for subfeddit in feedit_data:
-        for comment in subfeddit['comments']:
-            comment['sentiment'] = "positive"
-    return feedit_data
 
 
-async def fetch_subfeedits_comments(subfeddit_id: int):
+async def fetch_subfeedits_comments(subfeddit_id: int, limit: int):
     async with aiohttp.ClientSession() as session:
 
-        async with session.get(settings.FEDDIT_URL + f"/api/v1/comments/?subfeddit_id={subfeddit_id}") as resp:
+        async with session.get(settings.FEDDIT_URL + f"/api/v1/comments/?subfeddit_id={subfeddit_id}&limit={limit}") as resp:
             data = await resp.json()
 
     return data
