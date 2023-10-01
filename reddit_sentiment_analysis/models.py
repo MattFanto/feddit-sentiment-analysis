@@ -15,7 +15,8 @@ class CommentSentiment(BaseModel):
 
 
 class SentimentResponse(BaseModel):
-    data: List[CommentSentiment]
+    data: List[CommentSentiment] = Field(...,
+                                         description='Comments with sentiment score')
     limit: int = Field(...,
                        description="Max comment per request.",
                        examples=[50])
