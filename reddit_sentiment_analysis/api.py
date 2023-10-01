@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.get("/predict", response_model=SentimentResponse)
-async def predict(subfeddit_id: int, skip: int = 0):
+async def predict(subfeddit_id: int):
     limit = 25
     comments = await fetch_subfeedits_comments(subfeddit_id, limit=limit)
     res = []
@@ -20,7 +20,7 @@ async def predict(subfeddit_id: int, skip: int = 0):
         ))
 
     return SentimentResponse(
-        comments=res,
+        data=res,
         skip=0,
         limit=limit
     )
