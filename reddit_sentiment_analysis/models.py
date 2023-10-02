@@ -1,6 +1,19 @@
+from enum import Enum
 from typing import List
 
 from pydantic import BaseModel, Field
+
+
+class SortOrder(str, Enum):
+    """
+    Sort order for comments.
+    Using django style syntax
+    """
+    CREATED_AT_DESC = '-created_at'
+    CREATED_AT_ASC = '+created_at'
+    SENTIMENT_SCORE_DESC = '-sentiment_score'
+    SENTIMENT_SCORE_ASC = '+sentiment_score'
+    NONE = ''
 
 
 class SentimentScore(BaseModel):
@@ -19,6 +32,9 @@ class CommentSentiment(BaseModel):
     text: str = Field(...,
                       description='Original comment\'s text',
                       examples=['Awesome product'])
+    created_at: int = Field(...,
+                            description="Created time of the subfeddit in Unix"
+                                        " epochs.", examples=[1695757477])
     sentiment: SentimentScore = Field(...,
                                       description="Sentiment inferred by the model for this comment")
 

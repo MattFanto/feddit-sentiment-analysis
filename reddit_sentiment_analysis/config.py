@@ -13,5 +13,36 @@ class Settings(BaseSettings):
     access_log: bool = Field(True)
     workers: int = Field(1)
 
+    LOGGING_CONFIG: dict = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        'formatters': {
+            'jsonFormatter': {
+                '()': 'reddit_sentiment_analysis.logs.CustomJsonFormatter',
+                'format': '%(levelname)%(asctime)%(location)%(message)',
+            },
+        },
+        'handlers': {
+            'consoleHandler': {
+                'class': 'logging.StreamHandler',
+                'level': "INFO",
+                'formatter': 'jsonFormatter',
+            }
+        },
+        'loggers': {
+            'webapp': {
+                'handlers': ['consoleHandler'],
+                'level': "INFO",
+            },
+            'uvicorn': {
+                'handlers': ['consoleHandler']
+            },
+            'uvicorn.access': {
+                'handlers': ['consoleHandler']
+            }
+        }
+    }
+
+
 
 settings = Settings()

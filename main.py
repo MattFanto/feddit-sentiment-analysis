@@ -1,4 +1,3 @@
-from fastapi import FastAPI
 from reddit_sentiment_analysis.config import settings
 
 
