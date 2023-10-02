@@ -16,7 +16,7 @@ async def predict(subfeddit_id: int):
         res.append(CommentSentiment(
             id=comment["id"],
             text=comment["text"],
-            sentiment=str(sentiment)
+            sentiment=sentiment
         ))
 
     return SentimentResponse(

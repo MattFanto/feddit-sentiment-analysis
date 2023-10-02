@@ -10,6 +10,9 @@ import openai
 
 from json import JSONDecoder
 
+from reddit_sentiment_analysis.models import SentimentScore
+
+
 def extract_json_objects(text, decoder=JSONDecoder()):
     """Find JSON objects in text, and yield the decoded JSON data
 
@@ -38,7 +41,7 @@ The output will be parsed in Python, it's extremely important to return JSON for
 This is the prompt:
 """
 
-def predict_sentiment(feedit_data):
+def predict_sentiment(feedit_data) -> SentimentScore:
     prompt = PROMPT + feedit_data['text']
     # Call the sentiment analysis API with the prompt
     response = openai.Completion.create(
@@ -54,9 +57,7 @@ def predict_sentiment(feedit_data):
     out = extract_json_objects(out)
     try:
         out = json.loads(out)
-        assert "score" in out
-        assert "sentiment" in out
-        return out
+        return SentimentScore(**out)
     except Exception as e:
         logger.error("Failed to parse JSON response from OpenAI: ", out)
         raise e

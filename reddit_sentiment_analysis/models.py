@@ -3,6 +3,15 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
+class SentimentScore(BaseModel):
+    score: float = Field(...,
+                         description="Score from -1 to 1",
+                         examples=['0.89', '-0.32'])
+    sentiment: str = Field(...,
+                           description='Sentiment name',
+                           examples=['happy'])
+
+
 class CommentSentiment(BaseModel):
     id: int = Field(...,
                     description="Comment ID",
@@ -10,8 +19,8 @@ class CommentSentiment(BaseModel):
     text: str = Field(...,
                       description='Original comment\'s text',
                       examples=['Awesome product'])
-    sentiment: str = Field(...,
-                           description="Sentiment inferred by the model for this comment")
+    sentiment: SentimentScore = Field(...,
+                                      description="Sentiment inferred by the model for this comment")
 
 
 class SentimentResponse(BaseModel):
