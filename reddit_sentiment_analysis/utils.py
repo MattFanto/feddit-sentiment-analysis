@@ -3,7 +3,6 @@ from timeit import default_timer
 
 
 class ElapsedTimer:
-
     def __init__(self):
         self.start = default_timer()
 

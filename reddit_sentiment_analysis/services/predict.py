@@ -1,15 +1,15 @@
 import asyncio
 import json
-from typing import List, Iterable
+from typing import Iterable, List
 
 import boto3
 import openai
 
-from reddit_sentiment_analysis.config import settings, SentimentModel
+from reddit_sentiment_analysis.config import SentimentModel, settings
 from reddit_sentiment_analysis.logs import logger
-from reddit_sentiment_analysis.models import SentimentScore, Sentiment
+from reddit_sentiment_analysis.metrics import AWS_COMPREHEND_UNIT, OPENAI_COMPLETION_TOKENS, OPENAI_PROMPT_TOKENS
+from reddit_sentiment_analysis.models import Sentiment, SentimentScore
 from reddit_sentiment_analysis.utils import ElapsedTimer
-from reddit_sentiment_analysis.metrics import OPENAI_PROMPT_TOKENS, OPENAI_COMPLETION_TOKENS, AWS_COMPREHEND_UNIT
 
 
 def extract_json_objects(text):
@@ -29,7 +29,7 @@ PROMPT = """
 Given the the input text at the bottom return a sentiment score (float) in the range -1 to 1 (included) where:
 * -1 is extremely negative
 * 0 is neutral
-* 1 is extremely positive 
+* 1 is extremely positive
 
 Some examples:
 * "I love this product" -> 0.9
@@ -58,19 +58,19 @@ def openai_predict_sentiment(subfeddit_data) -> SentimentScore:
     t = ElapsedTimer()
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": PROMPT},
-            {"role": "user", "content": subfeddit_data['text']}
-        ],
+        messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": subfeddit_data["text"]}],
     )
-    openai_output = response.choices[0]['message']['content']
-    logger.info("OpenAI response", extra={
-        "openai_output": openai_output,
-        "duration_ms": t.elapsed(),
-        "usage": response["usage"],
-    })
-    OPENAI_PROMPT_TOKENS.observe(response['usage']['prompt_tokens'])
-    OPENAI_COMPLETION_TOKENS.observe(response['usage'].get('completion_tokens', 0))
+    openai_output = response.choices[0]["message"]["content"]
+    logger.info(
+        "OpenAI response",
+        extra={
+            "openai_output": openai_output,
+            "duration_ms": t.elapsed(),
+            "usage": response["usage"],
+        },
+    )
+    OPENAI_PROMPT_TOKENS.observe(response["usage"]["prompt_tokens"])
+    OPENAI_COMPLETION_TOKENS.observe(response["usage"].get("completion_tokens", 0))
     try:
         score = extract_json_objects(openai_output)
         assert "score" in score
@@ -82,16 +82,12 @@ def openai_predict_sentiment(subfeddit_data) -> SentimentScore:
         else:
             sentiment = Sentiment.NEUTRAL
 
-        return SentimentScore(
-            score=score,
-            sentiment=sentiment
-        )
+        return SentimentScore(score=score, sentiment=sentiment)
     except Exception as e:
-        logger.error("Failed to parse JSON response from OpenAI: ", extra={
-            "original_response": openai_output,
-            "input": subfeddit_data['text'],
-            "exception": str(e)
-        })
+        logger.error(
+            "Failed to parse JSON response from OpenAI: ",
+            extra={"original_response": openai_output, "input": subfeddit_data["text"], "exception": str(e)},
+        )
         raise e
 
 
@@ -103,10 +99,10 @@ def mocked_predict_sentiment(subfeddit_data) -> SentimentScore:
     :param subfeddit_data:
     :return:
     """
-    words = set([x.lower() for x in subfeddit_data['text'].split(" ")])
-    if len({'good', 'awesome', 'love'}.intersection(words)) > 0:
+    words = set([x.lower() for x in subfeddit_data["text"].split(" ")])
+    if len({"good", "awesome", "love"}.intersection(words)) > 0:
         return SentimentScore(score=0.9, sentiment="POSITIVE")
-    elif len({'bad', 'hate', 'terrible'}.intersection(words)) > 0:
+    elif len({"bad", "hate", "terrible"}.intersection(words)) > 0:
         return SentimentScore(score=-0.9, sentiment="NEGATIVE")
     else:
         return SentimentScore(score=0.0, sentiment="NEUTRAL")
@@ -121,24 +117,21 @@ def aws_predict_sentiment(subfeddit_data) -> SentimentScore:
     :return:
     """
     t = ElapsedTimer()
-    client = boto3.client('comprehend')
-    response = client.detect_sentiment(
-        Text=subfeddit_data['text'],
-        LanguageCode='en'
-    )
+    client = boto3.client("comprehend", region_name=settings.aws_region)
+    response = client.detect_sentiment(Text=subfeddit_data["text"], LanguageCode="en")
     # min 3 unit usage
-    usage = max(len(subfeddit_data['text']) // 100, 3)
-    logger.info("AWS comprehend response", extra={
-        "response": response,
-        "duration_ms": t.elapsed(),
-        "usage": usage,
-    })
-    AWS_COMPREHEND_UNIT.observe(usage)
-    score = response['SentimentScore']
-    return SentimentScore(
-        score=score['Positive'] - score['Negative'],
-        sentiment=response['Sentiment']
+    usage = max(len(subfeddit_data["text"]) // 100, 3)
+    logger.info(
+        "AWS comprehend response",
+        extra={
+            "response": response,
+            "duration_ms": t.elapsed(),
+            "usage": usage,
+        },
     )
+    AWS_COMPREHEND_UNIT.observe(usage)
+    score = response["SentimentScore"]
+    return SentimentScore(score=score["Positive"] - score["Negative"], sentiment=response["Sentiment"])
 
 
 def predict_sentiment(subfeddit_data) -> SentimentScore:
