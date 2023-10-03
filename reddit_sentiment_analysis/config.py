@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     env: str = Field("dev")
     feddit_url: str = Field("http://localhost:8080")
     sentiment_model: SentimentModel = Field(SentimentModel.MOCKED)
+    aws_region: str = Field("eu-central-1")
     host: str = Field("0.0.0.0")
     port: int = Field(8000)
     reload: bool = Field(True)

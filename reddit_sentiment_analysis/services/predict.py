@@ -117,7 +117,7 @@ def aws_predict_sentiment(subfeddit_data) -> SentimentScore:
     :return:
     """
     t = ElapsedTimer()
-    client = boto3.client("comprehend")
+    client = boto3.client("comprehend", region_name=settings.aws_region)
     response = client.detect_sentiment(Text=subfeddit_data["text"], LanguageCode="en")
     # min 3 unit usage
     usage = max(len(subfeddit_data["text"]) // 100, 3)
