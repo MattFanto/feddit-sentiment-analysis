@@ -47,8 +47,3 @@ async def predict(
         skip=0,
         limit=limit
     )
-
-
-@router.get("/version")
-async def health_check():
-    return "OK"

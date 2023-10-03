@@ -17,3 +17,8 @@ app.include_router(router, prefix=API_BASE_URL)
 instrumentator = Instrumentator().instrument(app)
 
 logging.config.dictConfig(settings.LOGGING_CONFIG)
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "OK"}

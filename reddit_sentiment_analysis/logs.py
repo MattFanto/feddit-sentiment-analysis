@@ -9,5 +9,3 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         log_record['location'] = f"{record.module}:{record.lineno}"
 
 logger = logging.getLogger("webapp")
-
-
