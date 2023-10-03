@@ -28,13 +28,16 @@ you can choose one model or the other via ENV configuration.
 SENTIMENT_MODEL=openai OPENAI_API_KEY=<your-openai-key> docker-compose up --build
 ```
 
-* AWS Comprehen approach, append to `.env` file the following content:
+* AWS Comprehend approach, append to `.env` file the following content:
 ```
 PREDICTIONS_MODEL=aws_comprehend \
 AWS_ACCESS_KEY_ID=<your-aws-access-key-id> \
 AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key> \
 docker-compose up --build
 ```
+
+## API
+Check [http://0.0.0.0:8000/docs](http://0.0.0.0:8000/docs) for OpenAPI documentation.
 
 ## Monitoring
 

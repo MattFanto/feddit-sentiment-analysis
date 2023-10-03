@@ -7,7 +7,7 @@ from reddit_sentiment_analysis.logs import logger
 from reddit_sentiment_analysis.utils import ElapsedTimer
 
 
-async def fetch_subfeedits_comments(subfeddit_id: int, limit: int):
+async def fetch_subfeddit_comments(subfeddit_id: int, limit: int):
 
     async with aiohttp.ClientSession() as session:
 

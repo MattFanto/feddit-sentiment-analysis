@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from reddit_sentiment_analysis.models import CommentSentiment, SentimentResponse, SortOrder
 from reddit_sentiment_analysis.services.predict import predict_sentiment_batch
-from reddit_sentiment_analysis.services.feddit_api import fetch_subfeedits_comments
+from reddit_sentiment_analysis.services.feddit_api import fetch_subfeddit_comments
 
 router = APIRouter()
 
@@ -30,7 +30,7 @@ async def predict(
 ):
     # From the problem statement: "Suppose a limit of 25 comments"
     limit = 25
-    comments = await fetch_subfeedits_comments(subfeddit_id, limit=limit)
+    comments = await fetch_subfeddit_comments(subfeddit_id, limit=limit)
     predictions = await predict_sentiment_batch(comments['comments'])
     res = []
     for comment, sentiment_pred in zip(comments['comments'], predictions):
