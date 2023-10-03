@@ -1,10 +1,19 @@
+from enum import Enum
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
+
+
+class SentimentModel(str, Enum):
+    OPENAI = 'openai'
+    MOCKED = 'mocked'
+    AWS_COMPREHEND = 'aws_comprehend'
 
 
 class Settings(BaseSettings):
     env: str = Field('dev')
     feddit_url: str = Field('http://localhost:8080')
+    sentiment_model: SentimentModel = Field(SentimentModel.MOCKED)
     host: str = Field('0.0.0.0')
     port: int = Field(8000)
     reload: bool = Field(True)
@@ -42,7 +51,6 @@ class Settings(BaseSettings):
             }
         }
     }
-
 
 
 settings = Settings()

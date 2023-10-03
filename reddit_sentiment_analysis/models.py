@@ -16,13 +16,19 @@ class SortOrder(str, Enum):
     NONE = ''
 
 
+class Sentiment(str, Enum):
+    POSITIVE = 'POSITIVE'
+    NEGATIVE = 'NEGATIVE'
+    NEUTRAL = 'NEUTRAL'
+
+
 class SentimentScore(BaseModel):
     score: float = Field(...,
                          description="Score from -1 to 1",
                          examples=['0.89', '-0.32'])
-    sentiment: str = Field(...,
+    sentiment: Sentiment = Field(...,
                            description='Sentiment name',
-                           examples=['happy'])
+                           examples=[Sentiment.POSITIVE, Sentiment.NEGATIVE, Sentiment.NEUTRAL])
 
 
 class CommentSentiment(BaseModel):

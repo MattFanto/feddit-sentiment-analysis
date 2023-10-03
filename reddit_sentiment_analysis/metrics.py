@@ -11,3 +11,8 @@ OPENAI_COMPLETION_TOKENS = Histogram(
     buckets=[20, 50, 100]
 )
 
+AWS_COMPREHEND_UNIT = Histogram(
+    "aws_comprehend_unit",
+    "Consumed AWS Comprehend units",
+    buckets=[3, 10, 20]
+)

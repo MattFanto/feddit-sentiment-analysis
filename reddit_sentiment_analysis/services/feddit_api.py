@@ -23,6 +23,7 @@ async def fetch_subfeedits_comments(subfeddit_id: int, limit: int):
         logger.info(f"Fetched comments for subfeddit", extra={
             "subfeddit_id": subfeddit_id,
             "limit": limit,
+            "comments_count": len(data['comments']),
             "duration_ms": t.elapsed()
         })
 

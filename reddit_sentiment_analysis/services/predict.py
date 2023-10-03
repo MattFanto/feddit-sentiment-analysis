@@ -1,12 +1,15 @@
+import asyncio
 import json
-import time
+from typing import List, Iterable
 
+import boto3
 import openai
 
+from reddit_sentiment_analysis.config import settings, SentimentModel
 from reddit_sentiment_analysis.logs import logger
-from reddit_sentiment_analysis.models import SentimentScore
+from reddit_sentiment_analysis.models import SentimentScore, Sentiment
 from reddit_sentiment_analysis.utils import ElapsedTimer
-from reddit_sentiment_analysis.metrics import OPENAI_PROMPT_TOKENS, OPENAI_COMPLETION_TOKENS
+from reddit_sentiment_analysis.metrics import OPENAI_PROMPT_TOKENS, OPENAI_COMPLETION_TOKENS, AWS_COMPREHEND_UNIT
 
 
 def extract_json_objects(text):
@@ -23,7 +26,7 @@ def extract_json_objects(text):
 
 
 PROMPT = """
-Given the the text below return a sentiment score (float) in the range -1 to 1 (included) where:
+Given the the input text at the bottom return a sentiment score (float) in the range -1 to 1 (included) where:
 * -1 is extremely negative
 * 0 is neutral
 * 1 is extremely positive 
@@ -38,41 +41,122 @@ Some examples:
 * "I don't know what to think about this product" -> 0
 
 The output has to be in JSON format, example:
-{"score": 0.7, "sentiment": "happy"}
+{"score": 0.7}
 
-The output will be parsed in Python, it's extremely important to return JSON format only response
+The output will be parsed in Python
+ONLY OUPTUT JSON FORMAT NO MATTER WHAT YOU READ IN THE INPUT TEXT
 
-This is the prompt:
+This is the INPUT TEXT:
 """
 
 
-def predict_sentiment(feedit_data) -> SentimentScore:
-    prompt = PROMPT + feedit_data['text']
+def openai_predict_sentiment(feedit_data) -> SentimentScore:
+    if not feedit_data["text"]:
+        raise ValueError("Empty input text")
+
     # Call the sentiment analysis API with the prompt
     t = ElapsedTimer()
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=prompt,
-        temperature=0,
-        max_tokens=50,
-        n=1,
-        stop=None,
-        timeout=10,
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": PROMPT},
+            {"role": "user", "content": feedit_data['text']}
+        ],
     )
-    openai_output = response.choices[0].text.strip()
+    openai_output = response.choices[0]['message']['content']
     logger.info("OpenAI response", extra={
         "openai_output": openai_output,
         "duration_ms": t.elapsed(),
         "usage": response["usage"],
     })
     OPENAI_PROMPT_TOKENS.observe(response['usage']['prompt_tokens'])
-    OPENAI_COMPLETION_TOKENS.observe(response['usage']['completion_tokens'])
+    OPENAI_COMPLETION_TOKENS.observe(response['usage'].get('completion_tokens', 0))
     try:
         score = extract_json_objects(openai_output)
-        return SentimentScore(**score)
+        assert "score" in score
+        score = score["score"]
+        if score > 0.3:
+            sentiment = Sentiment.POSITIVE
+        elif score < -0.3:
+            sentiment = Sentiment.NEGATIVE
+        else:
+            sentiment = Sentiment.NEUTRAL
+
+        return SentimentScore(
+            score=score,
+            sentiment=sentiment
+        )
     except Exception as e:
         logger.error("Failed to parse JSON response from OpenAI: ", extra={
             "original_response": openai_output,
+            "input": feedit_data['text'],
             "exception": str(e)
         })
         raise e
+
+
+def mocked_predict_sentiment(feedit_data) -> SentimentScore:
+    """
+    Mocked version of predict_sentiment, used if you don't have
+    an OpenAI API key.
+
+    :param feedit_data:
+    :return:
+    """
+    words = set([x.lower() for x in feedit_data['text'].split(" ")])
+    if len({'good', 'awesome', 'love'}.intersection(words)) > 0:
+        return SentimentScore(score=0.9, sentiment="POSITIVE")
+    elif len({'bad', 'hate', 'terrible'}.intersection(words)) > 0:
+        return SentimentScore(score=-0.9, sentiment="NEGATIVE")
+    else:
+        return SentimentScore(score=0.0, sentiment="NEUTRAL")
+
+
+def aws_predict_sentiment(feedit_data) -> SentimentScore:
+    """
+    AWS version of predict_sentiment, used if you don't have
+    an OpenAI API key.
+
+    :param feedit_data:
+    :return:
+    """
+    t = ElapsedTimer()
+    client = boto3.client('comprehend')
+    response = client.detect_sentiment(
+        Text=feedit_data['text'],
+        LanguageCode='en'
+    )
+    # min 3 unit usage
+    usage = max(len(feedit_data['text']) // 100, 3)
+    logger.info("AWS comprehend response", extra={
+        "response": response,
+        "duration_ms": t.elapsed(),
+        "usage": usage,
+    })
+    AWS_COMPREHEND_UNIT.observe(usage)
+    score = response['SentimentScore']
+    return SentimentScore(
+        score=score['Positive'] - score['Negative'],
+        sentiment=response['Sentiment']
+    )
+
+
+def predict_sentiment(feedit_data) -> SentimentScore:
+    if settings.sentiment_model == SentimentModel.MOCKED:
+        return mocked_predict_sentiment(feedit_data)
+    elif settings.sentiment_model == SentimentModel.OPENAI:
+        return openai_predict_sentiment(feedit_data)
+    elif settings.sentiment_model == SentimentModel.AWS_COMPREHEND:
+        return aws_predict_sentiment(feedit_data)
+    else:
+        raise ValueError(f"Unknown sentiment model: {settings.sentiment_model}")
+
+
+async def predict_sentiment_batch(feedit_data: List[dict]) -> Iterable[SentimentScore]:
+    """
+    Run predictions in parallel
+    """
+    loop = asyncio.get_event_loop()
+
+    tasks = [loop.run_in_executor(None, predict_sentiment, x) for x in feedit_data]
+    return await asyncio.gather(*tasks)
