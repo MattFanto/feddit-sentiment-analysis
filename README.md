@@ -45,3 +45,9 @@ To monitor the application I provided 2 tools:
 Prometheus is more a proof of concept, I didn't implement any alerting or dashboarding.
 In general if available there are better tools than Prometheus covering better distributed tracing aspect like NewRelic, Sentry, DataDog, Elastic APM, etc.
 
+
+## Tests
+
+For the sake of simplicity and time saving I created only 2 tests:
+* Sample smoke test running against a live service
+* Simple unit test for the AWS model
