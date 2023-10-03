@@ -1,20 +1,19 @@
-import os
+import logging.config
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from reddit_sentiment_analysis.api import router
+from reddit_sentiment_analysis.config import settings
 
 API_BASE_URL = '/api/v1'
 
 app = FastAPI(
     title="Reddit Sentiment Analysis API",
-    debug=True,
+    debug=settings.debug,
     openapi_url=f"{API_BASE_URL}/openapi.json",
 )
 app.include_router(router, prefix=API_BASE_URL)
+instrumentator = Instrumentator().instrument(app)
 
-
-if __name__ == '__main__':
-    import uvicorn
-    # TODO productionize
-    uvicorn.run("app:app", host='0.0.0.0', port=8000, reload=True)
+logging.config.dictConfig(settings.LOGGING_CONFIG)

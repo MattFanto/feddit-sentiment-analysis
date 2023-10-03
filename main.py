@@ -1,13 +1,13 @@
-from fastapi import FastAPI
-
-app = FastAPI()
+from reddit_sentiment_analysis.config import settings
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(
+        "reddit_sentiment_analysis.app:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload,
+        workers=settings.workers,
+        access_log=settings.access_log,
+    )
