@@ -6,7 +6,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from reddit_sentiment_analysis.api import router
 from reddit_sentiment_analysis.config import settings
 
-API_BASE_URL = '/api/v1'
+API_BASE_URL = "/api/v1"
 
 app = FastAPI(
     title="Reddit Sentiment Analysis API",
