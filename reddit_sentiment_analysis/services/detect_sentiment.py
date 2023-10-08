@@ -51,7 +51,7 @@ This is the INPUT TEXT:
 """
 
 
-def openai_predict_sentiment(comment: Comment) -> SentimentScore:
+def openai_detect_sentiment(comment: Comment) -> SentimentScore:
     if not comment.text:
         raise ValueError("Empty input text")
 
@@ -92,7 +92,7 @@ def openai_predict_sentiment(comment: Comment) -> SentimentScore:
         raise e
 
 
-def mocked_predict_sentiment(comment: Comment) -> SentimentScore:
+def mocked_detect_sentiment(comment: Comment) -> SentimentScore:
     """
     Mocked version of predict_sentiment, used if you don't have
     an OpenAI API key.
@@ -109,10 +109,9 @@ def mocked_predict_sentiment(comment: Comment) -> SentimentScore:
         return SentimentScore(score=0.0, sentiment="NEUTRAL")
 
 
-def aws_predict_sentiment(comment: Comment) -> SentimentScore:
+def aws_detect_sentiment(comment: Comment) -> SentimentScore:
     """
-    AWS version of predict_sentiment, used if you don't have
-    an OpenAI API key.
+    AWS version of detect_sentiment
 
     :param comment:
     :return:
@@ -135,22 +134,22 @@ def aws_predict_sentiment(comment: Comment) -> SentimentScore:
     return SentimentScore(score=score["Positive"] - score["Negative"], sentiment=response["Sentiment"])
 
 
-def predict_sentiment(comment: Comment) -> SentimentScore:
+def detect_sentiment(comment: Comment) -> SentimentScore:
     if settings.sentiment_model == SentimentModel.MOCKED:
-        return mocked_predict_sentiment(comment)
+        return mocked_detect_sentiment(comment)
     elif settings.sentiment_model == SentimentModel.OPENAI:
-        return openai_predict_sentiment(comment)
+        return openai_detect_sentiment(comment)
     elif settings.sentiment_model == SentimentModel.AWS_COMPREHEND:
-        return aws_predict_sentiment(comment)
+        return aws_detect_sentiment(comment)
     else:
         raise ValueError(f"Unknown sentiment model: {settings.sentiment_model}")
 
 
-async def predict_sentiment_batch(comments: List[Comment]) -> Iterable[SentimentScore]:
+async def detect_sentiment_batch(comments: List[Comment]) -> Iterable[SentimentScore]:
     """
-    Run predictions in parallel
+    Run detect sentiment in parallel.
     """
     loop = asyncio.get_event_loop()
 
-    tasks = [loop.run_in_executor(None, predict_sentiment, x) for x in comments]
+    tasks = [loop.run_in_executor(None, detect_sentiment, x) for x in comments]
     return await asyncio.gather(*tasks)

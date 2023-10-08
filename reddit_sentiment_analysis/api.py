@@ -5,8 +5,8 @@ from fastapi.exceptions import HTTPException
 
 from reddit_sentiment_analysis.logs import logger
 from reddit_sentiment_analysis.models import CommentSentiment, SentimentResponse, SortOrder
+from reddit_sentiment_analysis.services.detect_sentiment import detect_sentiment_batch
 from reddit_sentiment_analysis.services.feddit_api import fetch_subfeddit_comments
-from reddit_sentiment_analysis.services.predict import predict_sentiment_batch
 
 router = APIRouter()
 
@@ -26,8 +26,8 @@ def sort_comments(predictions: List[CommentSentiment], order_by: SortOrder):
 
 
 # TODO rename to detect comments sentiment
-@router.get("/predict", response_model=SentimentResponse)
-async def predict(
+@router.get("/detect-comments-sentiment", response_model=SentimentResponse)
+async def detect_comments_sentiment(
     subfeddit_id: int,
     order_by: SortOrder = SortOrder.NONE,
 ):
@@ -44,13 +44,13 @@ async def predict(
         raise HTTPException(status_code=500, detail="Failed to fetch comments") from e
 
     try:
-        predictions = await predict_sentiment_batch(comments_response.comments)
+        predictions = await detect_sentiment_batch(comments_response.comments)
     except HTTPException as e:
         raise e
     except Exception as e:
         # TODO: we may want to distinguish between retryable errors and non-retryable errors
         #    e.g. throttling (retryable) vs input too large (non-retryable)
-        logger.exception("Failed to predict sentiment")
+        logger.exception("Failed to detect sentiment for comments")
         raise HTTPException(status_code=500, detail="Failed to predict sentiment") from e
 
     res = []
