@@ -21,6 +21,8 @@ python-json-logger = "^2.0.7"
 pre-commit = "^3.4.0"
 moto = {extras = ["comprehend"], version = "^4.2.5"}
 pytest = "^7.4.2"
+httpx = "^0.25.0"
+pytest-mock = "^3.11.1"
 
 [build-system]
 requires = ["poetry-core"]
