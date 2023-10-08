@@ -9,6 +9,7 @@ from reddit_sentiment_analysis.config import SentimentModel, settings
 from reddit_sentiment_analysis.logs import logger
 from reddit_sentiment_analysis.metrics import AWS_COMPREHEND_UNIT, OPENAI_COMPLETION_TOKENS, OPENAI_PROMPT_TOKENS
 from reddit_sentiment_analysis.models import Sentiment, SentimentScore
+from reddit_sentiment_analysis.services.feddit_api import Comment
 from reddit_sentiment_analysis.utils import ElapsedTimer
 
 
@@ -50,15 +51,15 @@ This is the INPUT TEXT:
 """
 
 
-def openai_predict_sentiment(subfeddit_data) -> SentimentScore:
-    if not subfeddit_data["text"]:
+def openai_predict_sentiment(comment: Comment) -> SentimentScore:
+    if not comment.text:
         raise ValueError("Empty input text")
 
     # Call the sentiment analysis API with the prompt
     t = ElapsedTimer()
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": subfeddit_data["text"]}],
+        messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": comment.text}],
     )
     openai_output = response.choices[0]["message"]["content"]
     logger.info(
@@ -86,20 +87,20 @@ def openai_predict_sentiment(subfeddit_data) -> SentimentScore:
     except Exception as e:
         logger.error(
             "Failed to parse JSON response from OpenAI: ",
-            extra={"original_response": openai_output, "input": subfeddit_data["text"], "exception": str(e)},
+            extra={"original_response": openai_output, "input": comment.text, "exception": str(e)},
         )
         raise e
 
 
-def mocked_predict_sentiment(subfeddit_data) -> SentimentScore:
+def mocked_predict_sentiment(comment: Comment) -> SentimentScore:
     """
     Mocked version of predict_sentiment, used if you don't have
     an OpenAI API key.
 
-    :param subfeddit_data:
+    :param comment:
     :return:
     """
-    words = set([x.lower() for x in subfeddit_data["text"].split(" ")])
+    words = set([x.lower() for x in comment.text.split(" ")])
     if len({"good", "awesome", "love"}.intersection(words)) > 0:
         return SentimentScore(score=0.9, sentiment="POSITIVE")
     elif len({"bad", "hate", "terrible"}.intersection(words)) > 0:
@@ -108,19 +109,19 @@ def mocked_predict_sentiment(subfeddit_data) -> SentimentScore:
         return SentimentScore(score=0.0, sentiment="NEUTRAL")
 
 
-def aws_predict_sentiment(subfeddit_data) -> SentimentScore:
+def aws_predict_sentiment(comment: Comment) -> SentimentScore:
     """
     AWS version of predict_sentiment, used if you don't have
     an OpenAI API key.
 
-    :param subfeddit_data:
+    :param comment:
     :return:
     """
     t = ElapsedTimer()
     client = boto3.client("comprehend", region_name=settings.aws_region)
-    response = client.detect_sentiment(Text=subfeddit_data["text"], LanguageCode="en")
+    response = client.detect_sentiment(Text=comment.text, LanguageCode="en")
     # min 3 unit usage
-    usage = max(len(subfeddit_data["text"]) // 100, 3)
+    usage = max(len(comment.text) // 100, 3)
     logger.info(
         "AWS comprehend response",
         extra={
@@ -134,22 +135,22 @@ def aws_predict_sentiment(subfeddit_data) -> SentimentScore:
     return SentimentScore(score=score["Positive"] - score["Negative"], sentiment=response["Sentiment"])
 
 
-def predict_sentiment(subfeddit_data) -> SentimentScore:
+def predict_sentiment(comment: Comment) -> SentimentScore:
     if settings.sentiment_model == SentimentModel.MOCKED:
-        return mocked_predict_sentiment(subfeddit_data)
+        return mocked_predict_sentiment(comment)
     elif settings.sentiment_model == SentimentModel.OPENAI:
-        return openai_predict_sentiment(subfeddit_data)
+        return openai_predict_sentiment(comment)
     elif settings.sentiment_model == SentimentModel.AWS_COMPREHEND:
-        return aws_predict_sentiment(subfeddit_data)
+        return aws_predict_sentiment(comment)
     else:
         raise ValueError(f"Unknown sentiment model: {settings.sentiment_model}")
 
 
-async def predict_sentiment_batch(subfeddit_data: List[dict]) -> Iterable[SentimentScore]:
+async def predict_sentiment_batch(comments: List[Comment]) -> Iterable[SentimentScore]:
     """
     Run predictions in parallel
     """
     loop = asyncio.get_event_loop()
 
-    tasks = [loop.run_in_executor(None, predict_sentiment, x) for x in subfeddit_data]
+    tasks = [loop.run_in_executor(None, predict_sentiment, x) for x in comments]
     return await asyncio.gather(*tasks)
