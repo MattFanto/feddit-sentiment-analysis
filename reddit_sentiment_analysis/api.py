@@ -5,8 +5,8 @@ from fastapi.exceptions import HTTPException
 
 from reddit_sentiment_analysis.logs import logger
 from reddit_sentiment_analysis.models import CommentSentiment, SentimentResponse, SortOrder
+from reddit_sentiment_analysis.services import feddit_api
 from reddit_sentiment_analysis.services.detect_sentiment import detect_sentiment_batch
-from reddit_sentiment_analysis.services.feddit_api import fetch_subfeddit_comments
 
 router = APIRouter()
 
@@ -25,7 +25,6 @@ def sort_comments(predictions: List[CommentSentiment], order_by: SortOrder):
     return predictions
 
 
-# TODO rename to detect comments sentiment
 @router.get("/detect-comments-sentiment", response_model=SentimentResponse)
 async def detect_comments_sentiment(
     subfeddit_id: int,
@@ -36,7 +35,7 @@ async def detect_comments_sentiment(
     # and there is some ambiguity related to filtering and sorting in the problem statement
     limit = 25
     try:
-        comments_response = await fetch_subfeddit_comments(subfeddit_id, limit=limit)
+        comments_response = await feddit_api.fetch_subfeddit_comments(subfeddit_id, limit=limit)
     except HTTPException as e:
         raise e
     except Exception as e:
