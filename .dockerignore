@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!/reddit_sentiment_analysis
+!/main.py
+!/pyproject.toml
+!/poetry.lock
